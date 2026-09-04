@@ -1,41 +1,28 @@
 (() => {
-  const source = "https://nobottomline.github.io/rctl-repo/";
-  const button = document.querySelector("[data-copy-source]");
+  const input = document.querySelector("#repository-url");
   const status = document.querySelector("#copy-status");
 
-  if (!(button instanceof HTMLButtonElement) || !(status instanceof HTMLElement)) {
+  if (!(input instanceof HTMLInputElement) || !(status instanceof HTMLElement)) {
     return;
   }
 
-  const copyFallback = () => {
-    const input = document.createElement("textarea");
-    input.value = source;
-    input.setAttribute("readonly", "");
-    input.style.position = "fixed";
-    input.style.opacity = "0";
-    document.body.append(input);
+  const selectAddress = () => {
+    input.focus();
     input.select();
-    const copied = document.execCommand("copy");
-    input.remove();
-    return copied;
+    input.setSelectionRange(0, input.value.length);
   };
 
-  button.addEventListener("click", async () => {
+  input.addEventListener("focus", selectAddress);
+  input.addEventListener("click", async () => {
+    selectAddress();
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(source);
-      } else if (!copyFallback()) {
-        throw new Error("copy unavailable");
+      if (!navigator.clipboard || !window.isSecureContext) {
+        throw new Error("clipboard unavailable");
       }
-      button.textContent = "Copied";
-      status.textContent = "Repository URL copied to the clipboard.";
+      await navigator.clipboard.writeText(input.value);
+      status.textContent = "Repository address copied.";
     } catch {
-      status.textContent = "Select and copy the repository URL manually.";
+      status.textContent = "Repository address selected. Copy it manually.";
     }
-
-    window.setTimeout(() => {
-      button.textContent = "Copy source";
-      status.textContent = "";
-    }, 2400);
   });
 })();

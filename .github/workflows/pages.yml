@@ -70,5 +70,6 @@ jobs:
           done
           grep -F 'Package: com.greatlove.rctl' /tmp/Packages >/dev/null
           grep -F 'cydia://url/' /tmp/index.html >/dev/null
+          grep -F 'installer://add/repo=' /tmp/index.html >/dev/null
           grep -F 'sileo://source/' /tmp/index.html >/dev/null
           grep -F 'zbra://sources/add/' /tmp/index.html >/dev/null

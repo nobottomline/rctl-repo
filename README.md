@@ -3,8 +3,8 @@
 [![APT repository](https://img.shields.io/badge/APT-signed-147d64)](https://nobottomline.github.io/rctl-repo/)
 [![Publish](https://github.com/nobottomline/rctl-repo/actions/workflows/pages.yml/badge.svg)](https://github.com/nobottomline/rctl-repo/actions/workflows/pages.yml)
 
-This repository publishes the public LAN-only `rctl` package for Cydia, Sileo,
-Zebra, and compatible Debian APT package managers.
+This repository publishes the public LAN-only `rctl` package for Cydia,
+Installer, Sileo, Zebra, and compatible Debian APT package managers.
 
 **[Open the repository and choose a package manager](https://nobottomline.github.io/rctl-repo/)**
 

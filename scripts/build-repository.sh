@@ -158,7 +158,7 @@ rm -f "${OUTPUT}/index.html.bak" "${OUTPUT}/depictions/com.greatlove.rctl/index.
 if grep -R -F '@RCTL_VERSION@' "${OUTPUT}/index.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html" >/dev/null; then
   fail "generated site contains an unresolved version placeholder"
 fi
-for scheme in 'cydia://url/' 'sileo://source/' 'zbra://sources/add/'; do
+for scheme in 'cydia://url/' 'installer://add/repo=' 'sileo://source/' 'zbra://sources/add/'; do
   grep -F "${scheme}" "${OUTPUT}/index.html" >/dev/null || fail "generated site is missing ${scheme} install link"
 done
 

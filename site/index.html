@@ -4,101 +4,72 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#f6f7f8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#101314" media="(prefers-color-scheme: dark)">
-  <meta name="description" content="Install the public LAN-only rctl package for jailbroken iOS devices.">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111315" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Add the public rctl package repository to Cydia, Installer, Sileo, or Zebra.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
-  <title>rctl package repository</title>
+  <title>Add rctl repository</title>
   <link rel="icon" href="CydiaIcon.png">
   <link rel="stylesheet" href="styles.css">
   <script src="site.js" defer></script>
 </head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="./" aria-label="rctl repository home">
-      <img src="CydiaIcon.png" width="36" height="36" alt="">
-      <span>rctl repository</span>
-    </a>
-    <a class="header-link" href="https://github.com/nobottomline/rctl">GitHub</a>
-  </header>
-
-  <main>
-    <section class="hero" aria-labelledby="page-title">
-      <img class="app-icon" src="CydiaIcon.png" width="104" height="104" alt="rctl icon">
-      <div class="eyebrow">Public package · Version @RCTL_VERSION@</div>
-      <h1 id="page-title">rctl</h1>
-      <p class="lead">Self-hosted remote control for jailbroken iOS devices. Install the public package for trusted local-network access.</p>
-      <div class="support-line"><span class="status-dot" aria-hidden="true"></span>Qualified on iPadOS 14.4 · rootful unc0ver</div>
-    </section>
-
-    <section class="install-section" aria-labelledby="install-title">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">Install</div>
-          <h2 id="install-title">Add the repository</h2>
-        </div>
-        <span class="device-note">Open this page on your jailbroken device</span>
+<body class="repository-body">
+  <main class="repository-main">
+    <section class="repository-panel" aria-labelledby="page-title">
+      <div class="repository-title">
+        <img src="CydiaIcon.png" width="56" height="56" alt="">
+        <h1 id="page-title">Add rctl</h1>
       </div>
 
-      <div class="manager-grid">
-        <a class="manager-button cydia" href="cydia://url/https://cydia.saurik.com/api/share#?source=https://nobottomline.github.io/rctl-repo/">
-          <span class="manager-mark" aria-hidden="true">C</span>
-          <span><strong>Add to Cydia</strong><small>iOS 14 rootful</small></span>
-          <span class="arrow" aria-hidden="true">&#8599;</span>
+      <p class="repository-summary">Install the public LAN package for jailbroken iOS devices.</p>
+
+      <label class="visually-hidden" for="repository-url">Repository URL</label>
+      <input
+        id="repository-url"
+        class="repository-url"
+        type="text"
+        value="https://nobottomline.github.io/rctl-repo/"
+        readonly
+        spellcheck="false"
+        aria-describedby="copy-status"
+      >
+
+      <nav class="manager-bar" aria-label="Add repository to a package manager">
+        <a href="cydia://url/https://cydia.saurik.com/api/share#?source=https://nobottomline.github.io/rctl-repo/">
+          <span class="manager-icon cydia-icon" aria-hidden="true">C</span>
+          <span>Cydia</span>
         </a>
-        <a class="manager-button sileo" href="sileo://source/https://nobottomline.github.io/rctl-repo/">
-          <span class="manager-mark" aria-hidden="true">S</span>
-          <span><strong>Add to Sileo</strong><small>APT package manager</small></span>
-          <span class="arrow" aria-hidden="true">&#8599;</span>
+        <a href="installer://add/repo=https://nobottomline.github.io/rctl-repo/">
+          <span class="manager-icon installer-icon" aria-hidden="true">I</span>
+          <span>Installer</span>
         </a>
-        <a class="manager-button zebra" href="zbra://sources/add/https://nobottomline.github.io/rctl-repo/">
-          <span class="manager-mark" aria-hidden="true">Z</span>
-          <span><strong>Add to Zebra</strong><small>APT package manager</small></span>
-          <span class="arrow" aria-hidden="true">&#8599;</span>
+        <a href="sileo://source/https://nobottomline.github.io/rctl-repo/">
+          <span class="manager-icon sileo-icon" aria-hidden="true">S</span>
+          <span>Sileo</span>
         </a>
+        <a href="zbra://sources/add/https://nobottomline.github.io/rctl-repo/">
+          <span class="manager-icon zebra-icon" aria-hidden="true">Z</span>
+          <span>Zebra</span>
+        </a>
+      </nav>
+
+      <p class="copy-status" id="copy-status" role="status" aria-live="polite">Tap the address to copy it.</p>
+
+      <div class="repository-meta">
+        <span>Version @RCTL_VERSION@</span>
+        <span>iphoneos-arm</span>
+        <span>Rootful iOS 14</span>
       </div>
-
-      <div class="manual-source">
-        <div class="source-value">
-          <span class="source-label">Repository URL</span>
-          <code id="repository-url">https://nobottomline.github.io/rctl-repo/</code>
-        </div>
-        <button class="copy-button" type="button" data-copy-source aria-describedby="copy-status">Copy source</button>
-      </div>
-      <p class="copy-status" id="copy-status" role="status" aria-live="polite"></p>
-
-      <ol class="steps">
-        <li><span>1</span><p>Add this source in your package manager.</p></li>
-        <li><span>2</span><p>Refresh sources and search for <strong>rctl</strong>.</p></li>
-        <li><span>3</span><p>Install the package, then open <code>http://&lt;device-ip&gt;:8080/</code>.</p></li>
-      </ol>
-    </section>
-
-    <section class="information" aria-label="Repository information">
-      <article>
-        <h2>Public LAN package</h2>
-        <p>This repository contains only the ordinary local-network package. It never contains a relay URL, enrollment token, device identity, or VPS configuration.</p>
-      </article>
-      <article>
-        <h2>Remote access</h2>
-        <p>Internet access uses a private personalized package created by the self-hosted relay wizard. Do not publish or share that package.</p>
-        <a href="https://github.com/nobottomline/rctl#self-hosted-relay">Relay setup documentation</a>
-      </article>
-      <article>
-        <h2>Verified releases</h2>
-        <p>Packages are copied from immutable rctl releases, checked for relay credentials, indexed, and published with signed APT metadata.</p>
-        <a href="rctl-repo-key.asc">Repository signing key</a>
-      </article>
     </section>
   </main>
 
-  <footer>
-    <span>rctl @RCTL_VERSION@ · iphoneos-arm</span>
-    <nav aria-label="Footer">
+  <footer class="repository-footer">
+    <nav aria-label="Repository links">
       <a href="https://github.com/nobottomline/rctl">Source</a>
       <a href="https://github.com/nobottomline/rctl/releases">Releases</a>
-      <a href="https://github.com/nobottomline/rctl/blob/main/docs/SECURITY.md">Security</a>
+      <a href="rctl-repo-key.asc">Signing key</a>
     </nav>
+    <span>Public LAN package only</span>
   </footer>
 </body>
 </html>
