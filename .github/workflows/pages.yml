@@ -10,8 +10,6 @@ on:
       - site/**
       - .github/workflows/pages.yml
   workflow_dispatch:
-  schedule:
-    - cron: '17 4 * * *'
 
 concurrency:
   group: apt-repository-pages
@@ -71,4 +69,3 @@ jobs:
             test -s "/tmp/$path"
           done
           grep -F 'Package: com.greatlove.rctl' /tmp/Packages >/dev/null
-
