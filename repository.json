@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "source_repository": "nobottomline/rctl",
+  "base_url": "https://nobottomline.github.io/rctl-repo",
+  "bootstrap_tag": "v0.3.2",
+  "origin": "rctl",
+  "label": "rctl",
+  "suite": "stable",
+  "codename": "ios",
+  "architectures": [
+    "iphoneos-arm"
+  ],
+  "components": [
+    "main"
+  ],
+  "description": "Public LAN-only rctl packages for jailbroken iOS devices"
+}
+

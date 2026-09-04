@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>rctl @RCTL_VERSION@</title>
+  <style>
+    :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #18201e; background: #f4f7f6; }
+    main { max-width: 640px; margin: 0 auto; padding: 28px 20px; }
+    h1 { margin-bottom: 4px; font-size: 28px; letter-spacing: 0; }
+    p { line-height: 1.55; }
+    .meta { color: #53635e; }
+    a { color: #0d7259; }
+    @media (prefers-color-scheme: dark) { :root { color: #e8efec; background: #111714; } .meta { color: #9eaca7; } a { color: #6fd5b6; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>rctl</h1>
+    <div class="meta">Version @RCTL_VERSION@ · iphoneos-arm · iOS 14 or newer</div>
+    <p>Self-hosted remote control for jailbroken iOS devices. The public package provides LAN access on port 8080 and contains no relay endpoint or credential.</p>
+    <p>Remote relay access is provisioned separately from a user's own VPS and is never distributed through this public repository.</p>
+    <p><a href="https://github.com/nobottomline/rctl">Documentation and source code</a></p>
+  </main>
+</body>
+</html>
+
