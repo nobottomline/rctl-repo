@@ -27,6 +27,10 @@ done
 
 [[ -f "${CONFIG}" && ! -L "${CONFIG}" ]] || fail "repository.json is missing or unsafe"
 [[ -f "${LEDGER}" && ! -L "${LEDGER}" ]] || fail "releases.txt is missing or unsafe"
+for asset in index.html package.html styles.css site.js CydiaIcon.png; do
+  [[ -s "${ROOT}/site/${asset}" && ! -L "${ROOT}/site/${asset}" ]] || \
+    fail "site asset is missing, empty, or unsafe: ${asset}"
+done
 jq -e '
   keys == ["architectures", "base_url", "bootstrap_tag", "codename", "components", "description", "label", "origin", "schema", "source_repository", "suite"] and
   .schema == 1 and
@@ -145,10 +149,18 @@ done
 latest_version="${tags[${#tags[@]}-1]#v}"
 install -m 0644 "${ROOT}/site/index.html" "${OUTPUT}/index.html"
 install -m 0644 "${ROOT}/site/package.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html"
+install -m 0644 "${ROOT}/site/styles.css" "${OUTPUT}/styles.css"
+install -m 0644 "${ROOT}/site/site.js" "${OUTPUT}/site.js"
 install -m 0644 "${ROOT}/site/CydiaIcon.png" "${OUTPUT}/CydiaIcon.png"
 sed -i.bak "s/@RCTL_VERSION@/${latest_version}/g" \
   "${OUTPUT}/index.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html"
 rm -f "${OUTPUT}/index.html.bak" "${OUTPUT}/depictions/com.greatlove.rctl/index.html.bak"
+if grep -R -F '@RCTL_VERSION@' "${OUTPUT}/index.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html" >/dev/null; then
+  fail "generated site contains an unresolved version placeholder"
+fi
+for scheme in 'cydia://url/' 'sileo://source/' 'zbra://sources/add/'; do
+  grep -F "${scheme}" "${OUTPUT}/index.html" >/dev/null || fail "generated site is missing ${scheme} install link"
+done
 
 jq -n --arg version "${latest_version}" --arg source "https://github.com/${source_repository}" '{
   minVersion: "0.4",

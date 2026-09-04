@@ -55,7 +55,7 @@ jobs:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           base="${PAGE_URL%/}"
-          for path in Release Release.gpg InRelease Packages Packages.gz Packages.bz2 Packages.xz Packages.zst rctl-repo-key.asc; do
+          for path in index.html styles.css site.js Release Release.gpg InRelease Packages Packages.gz Packages.bz2 Packages.xz Packages.zst rctl-repo-key.asc; do
             ready=false
             for _ in $(seq 1 30); do
               if curl --proto '=https' --tlsv1.2 --fail --silent --show-error \
@@ -69,3 +69,6 @@ jobs:
             test -s "/tmp/$path"
           done
           grep -F 'Package: com.greatlove.rctl' /tmp/Packages >/dev/null
+          grep -F 'cydia://url/' /tmp/index.html >/dev/null
+          grep -F 'sileo://source/' /tmp/index.html >/dev/null
+          grep -F 'zbra://sources/add/' /tmp/index.html >/dev/null

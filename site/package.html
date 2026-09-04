@@ -4,25 +4,42 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f6f7f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101314" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="rctl package information.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
   <title>rctl @RCTL_VERSION@</title>
-  <style>
-    :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #18201e; background: #f4f7f6; }
-    main { max-width: 640px; margin: 0 auto; padding: 28px 20px; }
-    h1 { margin-bottom: 4px; font-size: 28px; letter-spacing: 0; }
-    p { line-height: 1.55; }
-    .meta { color: #53635e; }
-    a { color: #0d7259; }
-    @media (prefers-color-scheme: dark) { :root { color: #e8efec; background: #111714; } .meta { color: #9eaca7; } a { color: #6fd5b6; } }
-  </style>
+  <link rel="icon" href="../../CydiaIcon.png">
+  <link rel="stylesheet" href="../../styles.css">
 </head>
-<body>
-  <main>
-    <h1>rctl</h1>
-    <div class="meta">Version @RCTL_VERSION@ · iphoneos-arm · iOS 14 or newer</div>
-    <p>Self-hosted remote control for jailbroken iOS devices. The public package provides LAN access on port 8080 and contains no relay endpoint or credential.</p>
-    <p>Remote relay access is provisioned separately from a user's own VPS and is never distributed through this public repository.</p>
-    <p><a href="https://github.com/nobottomline/rctl">Documentation and source code</a></p>
+<body class="depiction-body">
+  <main class="depiction">
+    <header class="package-header">
+      <img class="package-icon" src="../../CydiaIcon.png" width="76" height="76" alt="">
+      <div>
+        <div class="eyebrow">System · Remote control</div>
+        <h1>rctl</h1>
+        <p class="package-version">Version @RCTL_VERSION@ · iphoneos-arm</p>
+      </div>
+    </header>
+
+    <p class="package-summary">Self-hosted browser control for jailbroken iOS devices. This public package provides trusted LAN access on port 8080.</p>
+
+    <dl class="package-facts">
+      <div><dt>Qualified platform</dt><dd>iPadOS 14.4, rootful unc0ver</dd></div>
+      <div><dt>Connection</dt><dd>Local network</dd></div>
+      <div><dt>Relay credentials</dt><dd>Not included</dd></div>
+    </dl>
+
+    <section class="package-copy">
+      <h2>Remote access</h2>
+      <p>A personalized relay package is created separately from your own VPS. Private relay packages and credentials are never distributed through this repository.</p>
+    </section>
+
+    <div class="package-links">
+      <a class="primary-link" href="https://github.com/nobottomline/rctl">Documentation and source</a>
+      <a href="https://github.com/nobottomline/rctl/releases">Release history</a>
+    </div>
   </main>
 </body>
 </html>
-
