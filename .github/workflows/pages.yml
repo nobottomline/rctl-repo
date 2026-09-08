@@ -5,8 +5,10 @@ on:
     branches: [main]
     paths:
       - releases.txt
+      - rootless-releases.txt
       - repository.json
       - scripts/**
+      - tests/**
       - site/**
       - .github/workflows/pages.yml
   workflow_dispatch:
@@ -30,6 +32,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes apt-utils dpkg-dev gnupg xz-utils zstd
+      - name: Test package validation
+        run: bash tests/packages.sh
       - name: Build and verify repository
         env:
           APT_REPOSITORY_SIGNING_KEY_B64: ${{ secrets.APT_REPOSITORY_SIGNING_KEY_B64 }}

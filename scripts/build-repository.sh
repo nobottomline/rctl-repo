@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT="${1:-${ROOT}/_site}"
 CONFIG="${ROOT}/repository.json"
 LEDGER="${ROOT}/releases.txt"
+ROOTLESS_LEDGER="${ROOT}/rootless-releases.txt"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/rctl-apt-repo.XXXXXX")"
 
 cleanup() {
@@ -27,6 +28,7 @@ done
 
 [[ -f "${CONFIG}" && ! -L "${CONFIG}" ]] || fail "repository.json is missing or unsafe"
 [[ -f "${LEDGER}" && ! -L "${LEDGER}" ]] || fail "releases.txt is missing or unsafe"
+[[ -f "${ROOTLESS_LEDGER}" && ! -L "${ROOTLESS_LEDGER}" ]] || fail "rootless-releases.txt is missing or unsafe"
 for asset in index.html package.html styles.css site.js CydiaIcon.png; do
   [[ -s "${ROOT}/site/${asset}" && ! -L "${ROOT}/site/${asset}" ]] || \
     fail "site asset is missing, empty, or unsafe: ${asset}"
@@ -41,7 +43,7 @@ jq -e '
   (.label | type == "string" and length > 0) and
   (.suite | type == "string" and length > 0) and
   (.codename | type == "string" and length > 0) and
-  (.architectures == ["iphoneos-arm"]) and
+  (.architectures == ["iphoneos-arm", "iphoneos-arm64"]) and
   (.components == ["main"]) and
   (.description | type == "string" and length > 0)
 ' "${CONFIG}" >/dev/null || fail "repository.json does not match schema 1"
@@ -67,13 +69,27 @@ for tag in "${tags[@]}"; do
   previous_version="${version}"
 done
 
+declare -A rootless_tags=()
+previous_version=""
+while IFS= read -r tag; do
+  [[ -n "${seen[${tag}]:-}" ]] || fail "rootless tag is not in the approved release ledger: ${tag}"
+  [[ -z "${rootless_tags[${tag}]:-}" ]] || fail "duplicate rootless release tag: ${tag}"
+  version="${tag#v}"
+  if [[ -n "${previous_version}" ]] && ! dpkg --compare-versions "${previous_version}" lt "${version}"; then
+    fail "rootless release ledger is not strictly increasing"
+  fi
+  rootless_tags["${tag}"]=1
+  previous_version="${version}"
+done < <(sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' "${ROOTLESS_LEDGER}")
+
+# Artifact validation is shared with the offline regression tests.
+source "${ROOT}/scripts/validate-package.sh"
+
 rm -rf "${OUTPUT}"
 mkdir -p "${OUTPUT}/pool" "${OUTPUT}/depictions/com.greatlove.rctl" "${WORK}/downloads"
 
 for tag in "${tags[@]}"; do
   version="${tag#v}"
-  package="rctl_${version}_iphoneos-arm.deb"
-  report="rctl-qualification_${version}.json"
   release_dir="${WORK}/downloads/${tag}"
   mkdir -p "${release_dir}"
 
@@ -81,48 +97,25 @@ for tag in "${tags[@]}"; do
     --jq '[.tag_name, .draft, .prerelease, .immutable] | @tsv')"
   [[ "${release_state}" == "${tag}"$'\tfalse\tfalse\ttrue' ]] || fail "${tag} is not an immutable stable release"
   gh release verify "${tag}" --repo "${source_repository}" >/dev/null
-  gh release download "${tag}" --repo "${source_repository}" \
-    --pattern "${package}" --pattern "${report}" --pattern SHA256SUMS \
-    --dir "${release_dir}"
+  architectures=(iphoneos-arm)
+  if [[ -n "${rootless_tags[${tag}]:-}" ]]; then architectures+=(iphoneos-arm64); fi
+  for architecture in "${architectures[@]}"; do
+    package="rctl_${version}_${architecture}.deb"
+    report="rctl-qualification_${version}.json"
+    if [[ "${architecture}" == iphoneos-arm64 ]]; then report="rctl-qualification_${version}_iphoneos-arm64.json"; fi
+    asset_dir="${release_dir}/${architecture}"
+    mkdir -p "${asset_dir}"
+    gh release download "${tag}" --repo "${source_repository}" \
+      --pattern "${package}" --pattern "${report}" --pattern SHA256SUMS \
+      --dir "${asset_dir}"
 
-  for asset in "${package}" "${report}" SHA256SUMS; do
-    [[ -f "${release_dir}/${asset}" && ! -L "${release_dir}/${asset}" ]] || fail "${tag} is missing ${asset}"
-    gh release verify-asset "${tag}" "${release_dir}/${asset}" --repo "${source_repository}" >/dev/null
+    for asset in "${package}" "${report}" SHA256SUMS; do
+      [[ -f "${asset_dir}/${asset}" && ! -L "${asset_dir}/${asset}" ]] || fail "${tag} is missing ${asset}"
+      gh release verify-asset "${tag}" "${asset_dir}/${asset}" --repo "${source_repository}" >/dev/null
+    done
+    validate_package "${asset_dir}" "${tag}" "${architecture}" "${bootstrap_tag}" "${WORK}/package-${version}-${architecture}"
+    install -m 0644 "${asset_dir}/${package}" "${OUTPUT}/pool/${package}"
   done
-
-  checksum_count="$(awk -v name="${package}" '$2 == name || $2 == "*" name { count++ } END { print count + 0 }' "${release_dir}/SHA256SUMS")"
-  [[ "${checksum_count}" == 1 ]] || fail "${tag} checksum set does not contain exactly one ${package} entry"
-  expected_sha="$(awk -v name="${package}" '$2 == name || $2 == "*" name { print $1 }' "${release_dir}/SHA256SUMS")"
-  [[ "${expected_sha}" =~ ^[0-9a-f]{64}$ ]] || fail "${tag} package checksum is malformed"
-  actual_sha="$(sha256sum "${release_dir}/${package}" | awk '{print $1}')"
-  [[ "${actual_sha}" == "${expected_sha}" ]] || fail "${tag} package checksum mismatch"
-
-  [[ "$(dpkg-deb -f "${release_dir}/${package}" Package)" == com.greatlove.rctl ]] || fail "${tag} package id is invalid"
-  [[ "$(dpkg-deb -f "${release_dir}/${package}" Version)" == "${version}" ]] || fail "${tag} package version is invalid"
-  [[ "$(dpkg-deb -f "${release_dir}/${package}" Architecture)" == iphoneos-arm ]] || fail "${tag} package architecture is invalid"
-
-  package_tree="${WORK}/package-${version}"
-  dpkg-deb -R "${release_dir}/${package}" "${package_tree}"
-  [[ -s "${package_tree}/var/mobile/rctl/index.html" ]] || fail "${tag} package has no control client"
-  [[ ! -e "${package_tree}/var/mobile/Library/Preferences/com.greatlove.rctl.relay.plist" ]] || fail "${tag} contains relay configuration"
-  if find "${package_tree}" -type f -print0 | xargs -0 grep -IEl 'ENROLL_TOKEN=[^[:space:]]+|enroll_[A-Za-z0-9_-]{16,}' >/dev/null 2>&1; then
-    fail "${tag} contains data resembling relay credentials"
-  fi
-
-  jq -e --arg tag "${tag}" --arg version "${version}" '
-    (.schema | type == "number" and . >= 2) and
-    .product == "rctl" and .tag == $tag and .version == $version and
-    (.checks | type == "object" and length > 0 and ([.[]] | all))
-  ' "${release_dir}/${report}" >/dev/null || fail "${tag} qualification report is incomplete"
-  if [[ "${tag}" != "${bootstrap_tag}" ]]; then
-    jq -e '
-      .schema >= 3 and
-      .checks.package_manager_upgrade == true and
-      .checks.package_manager_recovery == true
-    ' "${release_dir}/${report}" >/dev/null || fail "${tag} is not qualified for package-manager updates"
-  fi
-
-  install -m 0644 "${release_dir}/${package}" "${OUTPUT}/pool/${package}"
 done
 
 (
@@ -147,22 +140,23 @@ done
 )
 
 latest_version="${tags[${#tags[@]}-1]#v}"
+published_architectures="$(sed -n 's/^Architecture: //p' "${OUTPUT}/Packages" | sort -u | paste -sd ' ' -)"
 install -m 0644 "${ROOT}/site/index.html" "${OUTPUT}/index.html"
 install -m 0644 "${ROOT}/site/package.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html"
 install -m 0644 "${ROOT}/site/styles.css" "${OUTPUT}/styles.css"
 install -m 0644 "${ROOT}/site/site.js" "${OUTPUT}/site.js"
 install -m 0644 "${ROOT}/site/CydiaIcon.png" "${OUTPUT}/CydiaIcon.png"
-sed -i.bak "s/@RCTL_VERSION@/${latest_version}/g" \
+sed -i.bak -e "s/@RCTL_VERSION@/${latest_version}/g" -e "s/@RCTL_ARCHITECTURES@/${published_architectures}/g" \
   "${OUTPUT}/index.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html"
 rm -f "${OUTPUT}/index.html.bak" "${OUTPUT}/depictions/com.greatlove.rctl/index.html.bak"
-if grep -R -F '@RCTL_VERSION@' "${OUTPUT}/index.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html" >/dev/null; then
+if grep -E '@RCTL_[A-Z_]+@' "${OUTPUT}/index.html" "${OUTPUT}/depictions/com.greatlove.rctl/index.html" >/dev/null; then
   fail "generated site contains an unresolved version placeholder"
 fi
 for scheme in 'cydia://url/' 'installer://add/repo=' 'sileo://source/' 'zbra://sources/add/'; do
   grep -F "${scheme}" "${OUTPUT}/index.html" >/dev/null || fail "generated site is missing ${scheme} install link"
 done
 
-jq -n --arg version "${latest_version}" --arg source "https://github.com/${source_repository}" '{
+jq -n --arg version "${latest_version}" --arg architectures "${published_architectures}" --arg source "https://github.com/${source_repository}" '{
   minVersion: "0.4",
   class: "DepictionTabView",
   tintColor: "#147D64",
@@ -173,7 +167,7 @@ jq -n --arg version "${latest_version}" --arg source "https://github.com/${sourc
       {class: "DepictionHeaderView", title: "rctl"},
       {class: "DepictionMarkdownView", markdown: "Self-hosted remote control for jailbroken iOS devices. This repository package provides LAN-only access and contains no relay configuration."},
       {class: "DepictionTableTextView", title: "Version", text: $version},
-      {class: "DepictionTableTextView", title: "Architecture", text: "iphoneos-arm"},
+      {class: "DepictionTableTextView", title: "Architectures", text: $architectures},
       {class: "DepictionTableButtonView", title: "Source code", action: $source}
     ]
   }]
@@ -183,7 +177,7 @@ origin="$(jq -r .origin "${CONFIG}")"
 label="$(jq -r .label "${CONFIG}")"
 suite="$(jq -r .suite "${CONFIG}")"
 codename="$(jq -r .codename "${CONFIG}")"
-architectures="$(jq -r '.architectures | join(" ")' "${CONFIG}")"
+architectures="${published_architectures}"
 components="$(jq -r '.components | join(" ")' "${CONFIG}")"
 description="$(jq -r .description "${CONFIG}")"
 (

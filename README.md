@@ -33,6 +33,10 @@ project.
 ## Publication model
 
 - `releases.txt` is the append-only ledger of approved source release tags.
+- `rootless-releases.txt` is the explicit subset approved for rootless delivery.
+  It is initially empty; listing both architectures in `repository.json` enables
+  validation, not publication. `Release` advertises only architectures actually
+  present in the generated package index.
 - `scripts/build-repository.sh` verifies each release, package, checksum,
   attestation, qualification report, and public-package boundary.
 - The generator produces compressed APT indexes, web and native depictions, and
@@ -45,6 +49,31 @@ project.
 The OpenPGP private key is available only to the protected
 `apt-repository-signing` GitHub environment and the maintainer's offline backup.
 The generated feed publishes the public key and its fingerprint.
+
+## Rootless publication contract
+
+One source URL serves separate `rctl_VERSION_iphoneos-arm.deb` (rootful) and
+`rctl_VERSION_iphoneos-arm64.deb` (rootless) artifacts. Both keep package ID
+`com.greatlove.rctl`; APT selects the architecture. Never rename a rootful binary
+or combine the two layouts into one package.
+
+Before adding a tag to `rootless-releases.txt`, the same immutable source release
+must include the rootless DEB, its entry in `SHA256SUMS`, and an attested
+`rctl-qualification_VERSION_iphoneos-arm64.json` report. Schema 4 requires
+`product`, `tag`, `version`, `package: {name, architecture, sha256}` matching the
+exact artifact, and boolean checks `rootless_runtime`, `package_manager_install`,
+`package_manager_upgrade`, and `package_manager_recovery`, all true. All other
+checks must also be true. Reports are evidence produced after physical-device
+qualification, not values to fill in to unblock publication.
+
+The generator validates the `/var/jb` payload, non-empty control client, rootless
+maintainer-script prefix, ElleKit/firmware dependencies, and absence of private
+relay configuration. Old rootful tags do not need rootless assets. Rootless does
+not inherit the rootful bootstrap exemption for upgrade/recovery tests.
+
+Run offline validation tests with `bash tests/packages.sh` (Bash, jq, dpkg-deb,
+and sha256sum required). Production builds additionally verify immutable release
+assets and sign the complete index through the protected workflow.
 
 Source code, relay setup, security details, and contribution guidance live in
 the [main rctl repository](https://github.com/nobottomline/rctl).

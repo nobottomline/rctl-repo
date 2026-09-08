@@ -1,0 +1,3 @@
+# Approved stable tags that also contain a qualified iphoneos-arm64 artifact.
+# Each entry must already be present in releases.txt. No rootless release has
+# passed the package-manager upgrade/recovery gates yet.

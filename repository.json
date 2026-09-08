@@ -8,11 +8,11 @@
   "suite": "stable",
   "codename": "ios",
   "architectures": [
-    "iphoneos-arm"
+    "iphoneos-arm",
+    "iphoneos-arm64"
   ],
   "components": [
     "main"
   ],
   "description": "Public LAN-only rctl packages for jailbroken iOS devices"
 }
-
