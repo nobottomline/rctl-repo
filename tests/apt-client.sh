@@ -19,6 +19,16 @@ test "$fingerprint" = "$(cat "$ROOT/repository-key-fingerprint.txt")"
 gpgv --homedir "$WORK/gnupg" --keyring "$WORK/rctl-repo-key.gpg" --output "$WORK/signed-release" "$WORK/InRelease"
 cmp "$WORK/Release" "$WORK/signed-release"
 gpgv --homedir "$WORK/gnupg" --keyring "$WORK/rctl-repo-key.gpg" "$WORK/Release.gpg" "$WORK/Release"
+if grep -Eq '[[:space:]]Release$' "$WORK/Release"; then
+  echo 'Release must not contain a checksum of its own partial output' >&2
+  exit 1
+fi
+for file in Packages Packages.gz Packages.bz2 Packages.xz Packages.zst; do
+  fetch "$file"
+  expected="$(awk -v file="$file" '/^SHA256:/ {active=1; next} /^[^ ]/ {active=0} active && $3 == file {print $1}' "$WORK/Release")"
+  [[ "$expected" =~ ^[0-9a-f]{64}$ ]]
+  test "$(sha256sum "$WORK/$file" | awk '{print $1}')" = "$expected"
+done
 for arch in iphoneos-arm iphoneos-arm64; do
   dir="$WORK/$arch"
   mkdir -p "$dir/etc/empty" "$dir/state/lists/partial" "$dir/cache/archives/partial" "$dir/download"

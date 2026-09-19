@@ -170,8 +170,9 @@ description="$(jq -r .description "${CONFIG}")"
     -o "APT::FTPArchive::Release::Architectures=${published_architectures}" \
     -o "APT::FTPArchive::Release::Components=${components}" \
     -o "APT::FTPArchive::Release::Description=${description}" \
-    release . > Release
+    release . > "${WORK}/Release"
 )
+install -m 0644 "${WORK}/Release" "${OUTPUT}/Release"
 
 [[ -n "${APT_REPOSITORY_SIGNING_KEY_B64:-}" ]] || fail "APT_REPOSITORY_SIGNING_KEY_B64 is required"
 export GNUPGHOME="${WORK}/gnupg"
