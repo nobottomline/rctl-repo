@@ -1,85 +1,72 @@
 # rctl APT Repository
 
-[![APT repository](https://img.shields.io/badge/APT-signed-147d64)](https://nobottomline.github.io/rctl-repo/)
-[![Publish](https://github.com/nobottomline/rctl-repo/actions/workflows/pages.yml/badge.svg)](https://github.com/nobottomline/rctl-repo/actions/workflows/pages.yml)
-
-This repository publishes the public LAN-only `rctl` package for Cydia,
-Installer, Sileo, Zebra, and compatible Debian APT package managers.
-
-**[Open the repository and choose a package manager](https://nobottomline.github.io/rctl-repo/)**
-
-Manual source URL:
+**[Add rctl to your package manager](https://nobottomline.github.io/rctl-repo/)**
 
 ```text
 https://nobottomline.github.io/rctl-repo/
 ```
 
-The package feed is generated only from explicitly approved immutable releases
-of [`nobottomline/rctl`](https://github.com/nobottomline/rctl). It never builds a
-package and rejects personalized relay packages, relay configuration, and data
-resembling enrollment credentials.
+One source serves Cydia, Sileo, Installer, Zebra and compatible APT clients.
+The package is **rctl** (`com.greatlove.rctl`). Your package manager selects
+the compatible build and offers subsequent updates:
 
-## Scope
+| Jailbreak layout | Package architecture | Tested platform |
+| --- | --- | --- |
+| Rootful | `iphoneos-arm` | iPadOS 14.4, unc0ver / Substitute |
+| Rootless | `iphoneos-arm64` | iPadOS 15.5, Dopamine / ElleKit |
 
-This feed is exclusively for the ordinary public package that exposes rctl on a
-trusted local network. A personalized relay package is created privately by the
-self-hosted VPS wizard and must never be uploaded here.
+These are separate DEBs, not a universal binary. RootHide is not covered.
+The latest package is **0.4.4**. Public packages provide trusted-LAN access and
+contain no relay configuration. Existing relay identity lives separately and is
+preserved by updates. Personalized packages remain private.
 
-The current package is qualified on iPadOS 14.4 with rootful unc0ver and
-Substitute. Rootless and newer iOS configurations are not advertised as
-supported until their physical-device qualification passes in the source
-project.
+## Publication
 
-## Publication model
+The source project owns runtime qualification and the stable release decision.
+This repository distributes the **exact public artifacts**, without rebuilding:
 
-- `releases.txt` is the append-only ledger of approved source release tags.
-- `rootless-releases.txt` is the explicit subset approved for rootless delivery.
-  It is initially empty; listing both architectures in `repository.json` enables
-  validation, not publication. `Release` advertises only architectures actually
-  present in the generated package index.
-- `scripts/build-repository.sh` verifies each release, package, checksum,
-  attestation, qualification report, and public-package boundary.
-- The generator produces compressed APT indexes, web and native depictions, and
-  signed `InRelease`/`Release.gpg` metadata.
-- `.github/workflows/pages.yml` deploys the generated tree as a GitHub Pages
-  artifact. Generated `.deb` files and indexes are not committed to Git.
-- Tags after the bootstrap release require physical package-manager upgrade and
-  recovery checks in the source qualification report.
+1. `releases.txt` records stable tags; `rootless-releases.txt` records the subset
+   with rootless artifacts. The source publisher updates both in one commit,
+   after validating both packages. Older rootful-only releases remain available.
+2. The generator requires a public, stable, immutable GitHub Release and
+   verifies its release attestation and each asset against that attestation.
+3. DEBs must match `SHA256SUMS`, package ID, version, architecture, dependencies
+   and layout, contain a non-empty web client, and contain no relay configuration,
+   enrollment credentials or symlinks.
+4. The protected workflow generates compressed indexes and signs `InRelease`
+   and `Release.gpg`. The signing-key fingerprint is pinned in this repository.
+5. Isolated APT clients verify signatures, select and download both architectures,
+   and simulate fresh installation and upgrade before Pages deployment. The same
+   checks run against the public HTTPS feed afterward.
 
-The OpenPGP private key is available only to the protected
-`apt-repository-signing` GitHub environment and the maintainer's offline backup.
-The generated feed publishes the public key and its fingerprint.
+Distribution no longer requires separate runtime-report assets. The former
+contract required a rootless report the source publisher did not emit, preventing
+already published stable packages from reaching APT. Removing that duplicate
+gate does not create runtime evidence or change source release checks.
+Device qualification and remaining limits live in the
+[source documentation](https://github.com/nobottomline/rctl/blob/main/docs/ROOTLESS-RELEASE.md).
 
-## Rootless publication contract
+The OpenPGP private key stays in the protected `apt-repository-signing`
+environment and its offline backup. Public keys are published with the feed.
+Generated DEBs and indexes are Pages artifacts, not Git-tracked files.
 
-One source URL serves separate `rctl_VERSION_iphoneos-arm.deb` (rootful) and
-`rctl_VERSION_iphoneos-arm64.deb` (rootless) artifacts. Both keep package ID
-`com.greatlove.rctl`; APT selects the architecture. Never rename a rootful binary
-or combine the two layouts into one package.
+## Verification
 
-Before adding a tag to `rootless-releases.txt`, the same immutable source release
-must include the rootless DEB, its entry in `SHA256SUMS`, and an attested
-`rctl-qualification_VERSION_iphoneos-arm64.json` report. Schema 4 requires
-`product`, `tag`, `version`, `package: {name, architecture, sha256}` matching the
-exact artifact, and boolean checks `rootless_runtime`, `package_manager_install`,
-`package_manager_upgrade`, and `package_manager_recovery`, all true. All other
-checks must also be true. Reports are evidence produced after physical-device
-qualification, not values to fill in to unblock publication.
+Run `bash tests/release.sh` for offline package and release-boundary regression
+tests. `bash scripts/verify-release.sh vMAJOR.MINOR.PATCH /tmp/new-output`
+checks both public artifacts without a signing key or publication.
 
-The generator validates the `/var/jb` payload, non-empty control client, rootless
-maintainer-script prefix, ElleKit/firmware dependencies, and absence of private
-relay configuration. Old rootful tags do not need rootless assets. Rootless does
-not inherit the rootful bootstrap exemption for upgrade/recovery tests.
+The full generator needs Bash 4+, GitHub CLI, jq, Debian APT/dpkg tooling,
+GnuPG, curl and gzip/bzip2/xz/zstd. On Linux,
+`bash tests/apt-client.sh https://nobottomline.github.io/rctl-repo/ 0.4.4`
+uses disposable APT state and never installs packages or changes system sources.
+Its install/upgrade checks are dependency-solver simulations, not physical
+device lifecycle tests.
 
-Run offline validation tests with `bash tests/packages.sh` (Bash, jq, dpkg-deb,
-and sha256sum required). Production builds additionally verify immutable release
-assets and sign the complete index through the protected workflow.
-
-Source code, relay setup, security details, and contribution guidance live in
-the [main rctl repository](https://github.com/nobottomline/rctl).
+Source, relay setup and contribution guidance live in
+[nobottomline/rctl](https://github.com/nobottomline/rctl).
 
 ## License
 
-Repository tooling and site sources are licensed under the
-[Apache License 2.0](LICENSE). Published packages remain governed by the license
-and third-party notices in the corresponding source release.
+Repository tooling and site sources use [Apache License 2.0](LICENSE).
+Published packages retain their source-release license and third-party notices.

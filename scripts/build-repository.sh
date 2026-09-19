@@ -82,38 +82,18 @@ while IFS= read -r tag; do
   previous_version="${version}"
 done < <(sed -e 's/[[:space:]]*#.*$//' -e '/^[[:space:]]*$/d' "${ROOTLESS_LEDGER}")
 
-# Artifact validation is shared with the offline regression tests.
-source "${ROOT}/scripts/validate-package.sh"
-
 rm -rf "${OUTPUT}"
 mkdir -p "${OUTPUT}/pool" "${OUTPUT}/depictions/com.greatlove.rctl" "${WORK}/downloads"
 
 for tag in "${tags[@]}"; do
   version="${tag#v}"
   release_dir="${WORK}/downloads/${tag}"
-  mkdir -p "${release_dir}"
-
-  release_state="$(gh api "repos/${source_repository}/releases/tags/${tag}" \
-    --jq '[.tag_name, .draft, .prerelease, .immutable] | @tsv')"
-  [[ "${release_state}" == "${tag}"$'\tfalse\tfalse\ttrue' ]] || fail "${tag} is not an immutable stable release"
-  gh release verify "${tag}" --repo "${source_repository}" >/dev/null
   architectures=(iphoneos-arm)
   if [[ -n "${rootless_tags[${tag}]:-}" ]]; then architectures+=(iphoneos-arm64); fi
+  bash "${ROOT}/scripts/verify-release.sh" "${tag}" "${release_dir}" "${architectures[@]}"
   for architecture in "${architectures[@]}"; do
     package="rctl_${version}_${architecture}.deb"
-    report="rctl-qualification_${version}.json"
-    if [[ "${architecture}" == iphoneos-arm64 ]]; then report="rctl-qualification_${version}_iphoneos-arm64.json"; fi
     asset_dir="${release_dir}/${architecture}"
-    mkdir -p "${asset_dir}"
-    gh release download "${tag}" --repo "${source_repository}" \
-      --pattern "${package}" --pattern "${report}" --pattern SHA256SUMS \
-      --dir "${asset_dir}"
-
-    for asset in "${package}" "${report}" SHA256SUMS; do
-      [[ -f "${asset_dir}/${asset}" && ! -L "${asset_dir}/${asset}" ]] || fail "${tag} is missing ${asset}"
-      gh release verify-asset "${tag}" "${asset_dir}/${asset}" --repo "${source_repository}" >/dev/null
-    done
-    validate_package "${asset_dir}" "${tag}" "${architecture}" "${bootstrap_tag}" "${WORK}/package-${version}-${architecture}"
     install -m 0644 "${asset_dir}/${package}" "${OUTPUT}/pool/${package}"
   done
 done
@@ -177,7 +157,6 @@ origin="$(jq -r .origin "${CONFIG}")"
 label="$(jq -r .label "${CONFIG}")"
 suite="$(jq -r .suite "${CONFIG}")"
 codename="$(jq -r .codename "${CONFIG}")"
-architectures="${published_architectures}"
 components="$(jq -r '.components | join(" ")' "${CONFIG}")"
 description="$(jq -r .description "${CONFIG}")"
 (
@@ -188,7 +167,7 @@ description="$(jq -r .description "${CONFIG}")"
     -o "APT::FTPArchive::Release::Suite=${suite}" \
     -o "APT::FTPArchive::Release::Version=${latest_version}" \
     -o "APT::FTPArchive::Release::Codename=${codename}" \
-    -o "APT::FTPArchive::Release::Architectures=${architectures}" \
+    -o "APT::FTPArchive::Release::Architectures=${published_architectures}" \
     -o "APT::FTPArchive::Release::Components=${components}" \
     -o "APT::FTPArchive::Release::Description=${description}" \
     release . > Release
@@ -202,6 +181,7 @@ chmod 0600 "${WORK}/repository-key.asc"
 gpg --batch --import "${WORK}/repository-key.asc" >/dev/null 2>&1
 fingerprint="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
 [[ "${fingerprint}" =~ ^[0-9A-F]{40}$ ]] || fail "repository signing key is unavailable"
+[[ "$fingerprint" == "$(cat "$ROOT/repository-key-fingerprint.txt")" ]] || fail "repository signing key changed unexpectedly"
 gpg --batch --yes --local-user "${fingerprint}" --armor --detach-sign \
   --output "${OUTPUT}/Release.gpg" "${OUTPUT}/Release"
 gpg --batch --yes --local-user "${fingerprint}" --clearsign \

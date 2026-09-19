@@ -17,47 +17,52 @@ fixture() {
     printf "#!/bin/sh\nRCTL_PREFIX='/var/jb'\n" > "$tree/DEBIAN/postinst"
     chmod 755 "$tree/DEBIAN/postinst"
   else
+    printf 'Depends: mobilesubstrate, firmware (>= 14.0)\n' >> "$tree/DEBIAN/control"
     mkdir -p "$tree/var/mobile/rctl"
     printf 'test' > "$tree/var/mobile/rctl/index.html"
   fi
   dpkg-deb --build "$tree" "$WORK/assets/$name" >/dev/null
   sha="$(sha256sum "$WORK/assets/$name" | awk '{print $1}')"
   printf '%s  %s\n' "$sha" "$name" > "$WORK/assets/SHA256SUMS"
-  report="$WORK/assets/rctl-qualification_1.0.0.json"
-  if [[ "$arch" == iphoneos-arm64 ]]; then report="$WORK/assets/rctl-qualification_1.0.0_iphoneos-arm64.json"; fi
-  jq -n --arg arch "$arch" --arg name "$name" --arg sha "$sha" '{
-    schema: 4, product: "rctl", tag: "v1.0.0", version: "1.0.0",
-    package: {architecture: $arch, name: $name, sha256: $sha},
-    checks: {rootless_runtime: true, package_manager_install: true,
-      package_manager_upgrade: true, package_manager_recovery: true}
-  }' > "$report"
 }
 check() {
   local expected="$1" arch="$2" result=0
   rm -rf "$WORK/extracted"
-  (validate_package "$WORK/assets" v1.0.0 "$arch" v1.0.0 "$WORK/extracted") > "$WORK/result" 2>&1 || result=$?
+  (validate_package "$WORK/assets" v1.0.0 "$arch" "$WORK/extracted") > "$WORK/result" 2>&1 || result=$?
   if [[ "$expected" == pass && "$result" != 0 ]] || [[ "$expected" == fail && "$result" == 0 ]]; then
     cat "$WORK/result" >&2
     fail "unexpected result: $expected/$arch"
   fi
 }
-alter_report() { jq "$1" "$report" > "$report.next"; mv "$report.next" "$report"; }
+repack() {
+  local arch="$1" name="rctl_1.0.0_${1}.deb"
+  dpkg-deb --build "$WORK/input" "$WORK/assets/$name" >/dev/null
+  (cd "$WORK/assets" && sha256sum "$name" > SHA256SUMS)
+}
 fixture iphoneos-arm
 check pass iphoneos-arm
-alter_report '.schema = 2 | del(.package)'
-check pass iphoneos-arm # Bootstrap report compatibility.
 fixture iphoneos-arm64
 check pass iphoneos-arm64
-alter_report '.checks.package_manager_recovery = false'
-check fail iphoneos-arm64 # No bootstrap exception for rootless.
 fixture iphoneos-arm64
-alter_report '.checks.rootless_runtime = "true"'
+printf '' > "$WORK/input/var/jb/usr/local/share/rctl/web/index.html"
+repack iphoneos-arm64
 check fail iphoneos-arm64
 fixture iphoneos-arm64
-alter_report '.package.architecture = "iphoneos-arm"'
+mkdir -p "$WORK/input/var/mobile/Library/Preferences"
+printf 'private' > "$WORK/input/var/mobile/Library/Preferences/com.greatlove.rctl.relay.plist"
+repack iphoneos-arm64
 check fail iphoneos-arm64
 fixture iphoneos-arm64
-alter_report '.package.sha256 = ("0" * 64)'
+printf 'ENROLL_TOKEN=fixture-not-a-real-secret\n' > "$WORK/input/var/jb/secret"
+repack iphoneos-arm64
+check fail iphoneos-arm64
+fixture iphoneos-arm64
+ln -s /etc/passwd "$WORK/input/var/jb/link"
+repack iphoneos-arm64
+check fail iphoneos-arm64
+fixture iphoneos-arm64
+printf '#!/bin/sh\n' > "$WORK/input/DEBIAN/postinst"
+repack iphoneos-arm64
 check fail iphoneos-arm64
 fixture iphoneos-arm64
 cat "$WORK/assets/SHA256SUMS" >> "$WORK/assets/duplicate"
@@ -71,4 +76,4 @@ mv "$WORK/assets/rctl_1.0.0_iphoneos-arm.deb" "$WORK/assets/rctl_1.0.0_iphoneos-
 sha="$(sha256sum "$WORK/assets/rctl_1.0.0_iphoneos-arm64.deb" | awk '{print $1}')"
 printf '%s  rctl_1.0.0_iphoneos-arm64.deb\n' "$sha" > "$WORK/assets/SHA256SUMS"
 check fail iphoneos-arm64 # Renaming a rootful deb cannot make it rootless.
-printf 'Package architecture and qualification tests passed.\n'
+printf 'Public package integrity and architecture tests passed.\n'
